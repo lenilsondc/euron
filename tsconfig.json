@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "module": "system",
+        "target": "es5",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "preserveConstEnums": true,
+        "outFile": "./built/local/built.js",
+        /*"outDir": "./built/local",*/
+        "sourceMap": true
+    },
+    "directories": [
+        "./src"
+    ]
+}

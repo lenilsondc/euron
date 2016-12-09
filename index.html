@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Your Website</title>
+    <style>
+        #input,
+        #output {
+            width: 100%;
+        }
+        
+        #output {
+            padding: 20px;
+            font-family: "Times New Roman";
+            font-size: 24px;
+            font-decoration: italic;
+        }
+        .tip{
+            text-align: right;
+        }
+    </style>
+</head>
+<body>    
+    <textarea id="input" rows=8 style="width: 100%;" autofocus>
+        ((2/(30+2))+!((1+1)^2) )*2
+    </textarea>
+    <div class="tip"><small><i>Crl+Enter to eval</i></small></div>
+    <div id="output"></div>
+
+    <script src="./tools/system.js"></script>
+    <script src="./tools/typescript.js"></script>
+
+    <script>
+        System.config({
+            transpiler: 'typescript',
+            packages: {
+                src: {
+                    defaultExtension: 'ts'
+                }
+            } 
+        });
+        System
+            .import('./src/interpretor.ts')
+            .then(null, console.error.bind(console));
+    </script>
+</body>
+
+</html>
