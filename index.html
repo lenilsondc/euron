@@ -16,12 +16,43 @@
             font-size: 24px;
             font-decoration: italic;
         }
-        .tip{
+        
+        .tip {
             text-align: right;
+        }
+        
+        .fraction {
+            display: inline-block;
+            position: relative;
+            vertical-align: middle;
+            text-align: center;
+            word-spacing: normal;
+            padding-bottom: 2px;
+            font-size: 95%;
+        }
+
+        sup > .fraction,
+        sub > .fraction {
+            font-size: 85%;
+        }
+        
+        .fraction > .symbol {
+            display: none;
+        }
+        
+        .fraction > .numerator,
+        .fraction > .denominator {
+            display: block;
+            padding: 0;
+        }
+        
+        .fraction > .denominator {
+            border-top: 1px solid black;
         }
     </style>
 </head>
-<body>    
+
+<body>
     <textarea id="input" rows=8 style="width: 100%;" autofocus>
         ((2/(30+2))+!((1+1)^2) )*2
     </textarea>

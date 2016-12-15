@@ -4,12 +4,13 @@ enum TokenType {
 
     NUMBER, // 0123456789
 
-    ASIGN, // =
+    ASSIGN, // =
 
     LPAREN, // (
     RPAREN, // )
 
     COMMA, // ,
+    SEMICOLON, // ;
 
     PLUS, // +
     MINUS, // -
@@ -102,7 +103,11 @@ class Lexer {
                 this.readWhiteSpace();
                 return this.nextToken();
             case '\n':
+                this.advance();
                 return new Token(TokenType.EOL, '\n');
+            case ';':
+                this.advance();
+                return new Token(TokenType.SEMICOLON, ';');
             case '0':
             case '1':
             case '2':
@@ -135,7 +140,7 @@ class Lexer {
                 return new Token(TokenType.FACTORIAL, char);
             case '=':
                 this.advance();
-                return new Token(TokenType.ASIGN, char);
+                return new Token(TokenType.ASSIGN, char);
             case '(':
                 this.advance();
                 return new Token(TokenType.LPAREN, char);
@@ -157,7 +162,8 @@ class Lexer {
                             return new Token(TokenType.ID, 'pi');
 
                         default:
-                            throw new Error(`wooops! unespected sequence '${id}' at ${this.lexCursor}`);
+                            return new Token(TokenType.ID, id);
+                        //throw new Error(`wooops! unespected sequence '${id}' at ${this.lexCursor}`);
                     }
 
                 } else if (char != undefined) {
@@ -174,7 +180,9 @@ interface IASTVisitor {
     visitValueExpr(valueExpr: ValueExpr): void;
     visitFactorialExpr(factorialExpr: FactorialExpr): void;
     visitBinaryExpr(binaryExpr: BinaryExpr): void;
-    visitConstExpr(constExpr: ConstExpr): void;
+    visitRefExpr(constExpr: RefExpr): void;
+    visitAssignExpr(assignExpr: AssignExpr): void;
+    visitStatementListExpr(statementListExpr: StatementListExpr): void;
 }
 
 class ASTPrinterVisitor implements IASTVisitor {
@@ -187,12 +195,12 @@ class ASTPrinterVisitor implements IASTVisitor {
     }
 
     public visitUnaryExpr(unaryExpr: UnaryExpr) {
-        let signFactor = 1;
+        let signFactor = ``;
 
         switch (unaryExpr.opToken) {
             //case TokenType.PLUS:
             case TokenType.MINUS:
-                signFactor = -1;
+                signFactor = `&minus;`;
                 break;
         }
 
@@ -223,12 +231,13 @@ class ASTPrinterVisitor implements IASTVisitor {
         'e': '<i>e</i>'
     };
 
-    public visitConstExpr(constExpr: ConstExpr) {
+    public visitRefExpr(constExpr: RefExpr) {
 
         let result = this.constTable[constExpr.constToken.value];
 
         if (result === undefined) {
-            throw new Error("Undefined symbol '${constExpr.constToken.value}'.");
+            result = constExpr.constToken.value;
+            //throw new Error(`Undefined symbol '${constExpr.constToken.value}'.`);
         }
 
         this.stack.push(`${result}`);
@@ -242,7 +251,7 @@ class ASTPrinterVisitor implements IASTVisitor {
     public visitFactorialExpr(factorialExpr: FactorialExpr) {
         factorialExpr.factor.accept(this);
 
-        if (factorialExpr.factor instanceof ValueExpr || factorialExpr.factor instanceof FactorialExpr || factorialExpr.factor instanceof ConstExpr) {
+        if (factorialExpr.factor instanceof ValueExpr || factorialExpr.factor instanceof FactorialExpr || factorialExpr.factor instanceof RefExpr) {
             this.stack.push(`!${this.stack.pop()}`);
         } else {
             this.stack.push(`!(${this.stack.pop()})`);
@@ -259,9 +268,15 @@ class ASTPrinterVisitor implements IASTVisitor {
         let left = '';
 
         if (binaryExpr.left instanceof ValueExpr || binaryExpr.left instanceof FactorialExpr
-            || ((binaryExpr.left instanceof BinaryExpr) && (
-                (<BinaryExpr>binaryExpr.left).token === TokenType.DIVI || (<BinaryExpr>binaryExpr.left).token === binaryExpr.token))
-            || binaryExpr.left instanceof ConstExpr) {
+            || (
+                (binaryExpr.left instanceof BinaryExpr)
+                && (
+                    (<BinaryExpr>binaryExpr.left).token === TokenType.DIVI
+                    || (<BinaryExpr>binaryExpr.left).token === binaryExpr.token
+                    || (<BinaryExpr>binaryExpr.left).token === TokenType.POW
+                )
+            )
+            || binaryExpr.left instanceof RefExpr) {
             left += `${this.stack.pop()}`;
         } else {
             left += `(${this.stack.pop()})`;
@@ -272,9 +287,11 @@ class ASTPrinterVisitor implements IASTVisitor {
         let right = '';
 
         if (binaryExpr.right instanceof ValueExpr || binaryExpr.right instanceof FactorialExpr
+            || binaryExpr.token === TokenType.POW
             || ((binaryExpr.right instanceof BinaryExpr) && (
-                (<BinaryExpr>binaryExpr.right).token === TokenType.DIVI || (<BinaryExpr>binaryExpr.right).token === binaryExpr.token))
-            || binaryExpr.right instanceof ConstExpr) {
+                (<BinaryExpr>binaryExpr.right).token === TokenType.DIVI || (<BinaryExpr>binaryExpr.right).token === binaryExpr.token)
+                || (<BinaryExpr>binaryExpr.right).token === TokenType.POW)
+            || binaryExpr.right instanceof RefExpr) {
             right += `${this.stack.pop()}`;
         } else {
             right += `(${this.stack.pop()})`;
@@ -290,13 +307,18 @@ class ASTPrinterVisitor implements IASTVisitor {
     private resolve(type: TokenType, left: string, right: string): string {
         switch (type) {
             case TokenType.PLUS:
-                return `${left} + ${right}`;
+                return `${left} &plus; ${right}`;
             case TokenType.MINUS:
-                return `${left} - ${right}`;
+                return `${left} &minus; ${right}`;
             case TokenType.DIVI:
                 return `<sup>${left}</sup>&frasl;<sub>${right}</sub>`;
+            /*return `<span class="fraction">
+                <span class="numerator">${left}</span>
+                <span class="denominator">${right}</span>
+            </span>`;*/
             case TokenType.MULT:
                 return `${left} &times; ${right}`;
+            //return `${left}${right}`;
             case TokenType.POW:
                 // expression for squared
                 //return `<span class="radic"><sup><var>${right}</var></sup>&#8730;</span><span class="radicand">${left}</span>`;
@@ -304,16 +326,42 @@ class ASTPrinterVisitor implements IASTVisitor {
             default:
                 throw `Unexpected token type '${TokenType[type]}' in binary operation!`;
         }
-    };
+    }
+
+    public visitAssignExpr(assignExpr: AssignExpr) {
+        assignExpr.expr.accept(this);
+
+        this.stack.push(`${assignExpr.id.value} = ${this.stack.pop()}`);
+
+        if (this.stack.length === 0) {
+            this.output = this.stack.join('');
+        }
+    }
+
+    public visitStatementListExpr(statementListExpr: StatementListExpr) {
+
+        statementListExpr.statements.forEach(expr => {
+            expr.accept(this);
+            this.stack.push(`${this.stack.pop()}<br>`);
+        });
+
+        if (this.stack.length === 0) {
+            this.output = this.stack.join('');
+        }
+    }
 }
 
 class ASTCalculatorVisitor implements IASTVisitor {
 
+    public scope: any = {
+        'pi': Math.PI,
+        'e': Math.E
+    };
     public stack: number[] = [];
     public output: number = 0;
 
     public getOutput(): number {
-        return this.stack[0];
+        return this.scope['out'];
     }
 
     public visitUnaryExpr(unaryExpr: UnaryExpr) {
@@ -342,14 +390,9 @@ class ASTCalculatorVisitor implements IASTVisitor {
         this.stack.push(Number(valueExpr.num));
     }
 
-    private constTable: any = {
-        'pi': Math.PI,
-        'e': Math.E
-    };
+    public visitRefExpr(constExpr: RefExpr) {
 
-    public visitConstExpr(constExpr: ConstExpr) {
-
-        let result = this.constTable[constExpr.constToken.value];
+        let result = this.scope[constExpr.constToken.value];
 
         if (result === undefined) {
             throw new Error("Undefined symbol '${constExpr.constToken.value}'.");
@@ -413,7 +456,20 @@ class ASTCalculatorVisitor implements IASTVisitor {
             default:
                 throw `Unexpected token type '${TokenType[type]}' in binary operation!`;
         }
-    };
+    }
+
+    public visitAssignExpr(assignExpr: AssignExpr) {
+        assignExpr.expr.accept(this);
+
+        this.scope[assignExpr.id.value] = this.stack.pop();
+    }
+
+    public visitStatementListExpr(statementListExpr: StatementListExpr) {
+
+        statementListExpr.statements.forEach(expr => {
+            expr.accept(this);
+        });
+    }
 }
 
 abstract class AST {
@@ -445,7 +501,7 @@ class ValueExpr extends AST {
     }
 }
 
-class ConstExpr extends AST {
+class RefExpr extends AST {
 
     constructor(
         public constToken: Token) {
@@ -453,7 +509,7 @@ class ConstExpr extends AST {
     }
 
     public accept(visitor: IASTVisitor) {
-        visitor.visitConstExpr(this);
+        visitor.visitRefExpr(this);
     }
 }
 
@@ -483,6 +539,30 @@ class BinaryExpr extends AST {
     }
 }
 
+class AssignExpr extends AST {
+
+    constructor(
+        public id: Token,
+        public expr: AST) {
+        super();
+    }
+
+    public accept(visitor: IASTVisitor) {
+        visitor.visitAssignExpr(this);
+    }
+}
+
+class StatementListExpr extends AST {
+    constructor(
+        public statements: AST[]) {
+        super();
+    }
+
+    public accept(visitor: IASTVisitor) {
+        visitor.visitStatementListExpr(this);
+    }
+}
+
 class Parser {
 
     public lexer: Lexer;
@@ -507,12 +587,31 @@ class Parser {
     }
 
     public parse(): AST {
-        return this.expr();
+        return this.declarations();
+    }
+
+    public declarations(): AST {
+
+        let assignList: AssignExpr[] = [];
+
+        while (this.currentToken.type !== TokenType.EOF) {
+
+            let id = this.currentToken;
+            this.eat(TokenType.ID);
+            this.eat(TokenType.ASSIGN);
+            assignList.push(new AssignExpr(id, this.expr()));
+
+            if (this.currentToken.type === TokenType.EOL || this.currentToken.type === TokenType.SEMICOLON) {
+                this.eat(this.currentToken.type);
+            }
+        }
+
+        return new StatementListExpr(assignList);
     }
 
     public expr(): AST {
 
-        // expr : term ((PLUS | MINUS) term)*
+        // expr : term ((PLUS | MINUS) expr)?
 
         let term = this.term();
 
@@ -522,7 +621,7 @@ class Parser {
             let lTerm = term;
             let token = this.currentToken.type;
             this.eat(this.currentToken.type);
-            let rTerm = this.term();
+            let rTerm = this.expr();
 
             return new BinaryExpr(lTerm, token, rTerm);
         }
@@ -590,7 +689,7 @@ class Parser {
 
     public const(): AST {
 
-        let constant = new ConstExpr(this.currentToken);
+        let constant = new RefExpr(this.currentToken);
         this.eat(TokenType.ID);
 
         return constant;
@@ -611,6 +710,9 @@ class Parser {
 export default class Intepretor {
 
     constructor() { }
+
+    // TODO: implement the following grammar
+    // declaration : ID EQUAL expr
 
     /*
     expr : term ((PLUS | MINUS) term)*
@@ -654,6 +756,6 @@ inputElement.addEventListener('keydown', (e) => {
         interpretor.interpret(inputElement.value, printerVisitor);
         let print = printerVisitor.getOutput();//printerVisitor.output;
 
-        outputElement.innerHTML = print + ' = ' + val.toString();
+        outputElement.innerHTML = print + ' <br>out = ' + val.toString();
     }
 });
