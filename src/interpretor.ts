@@ -574,7 +574,7 @@ class Parser {
     }
 
     public error(msg?: string) {
-        throw `Invalid syntax: ${msg}`;
+        throw new Error(`Invalid syntax: ${msg}`);
     }
 
     public eat(tokenType: TokenType) {
@@ -641,7 +641,17 @@ class Parser {
             return new BinaryExpr(factor, TokenType.MULT, this.term());
         }
 
-        if (this.currentToken.type === TokenType.MULT || this.currentToken.type === TokenType.DIVI || this.currentToken.type === TokenType.POW) {
+        if (this.currentToken.type === TokenType.POW) {
+
+            let lFactor = factor;
+            let token = this.currentToken.type;
+            this.eat(this.currentToken.type);
+            let rTerm = this.factor();
+
+            factor = new BinaryExpr(lFactor, token, rTerm);
+        }
+
+        if (this.currentToken.type === TokenType.MULT || this.currentToken.type === TokenType.DIVI) {
 
             let lFactor = factor;
             let token = this.currentToken.type;
@@ -656,10 +666,12 @@ class Parser {
 
     public factor(): AST {
 
-        // factor : (PLUS | MINUS) factor
-        //        | FACTORIAL factor
-        //        | closure
+        // factor : PLUS factor
+        //        | MINUS factor
         //        | NUMBER
+        //        | FACTORIAL NUMBER
+        //        | LPAREN expr RPAREN
+        //        | variable
 
         if (this.currentToken.type === TokenType.PLUS || this.currentToken.type === TokenType.MINUS) {
             let opToken = this.currentToken.type;
