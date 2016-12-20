@@ -395,7 +395,7 @@ class ASTCalculatorVisitor implements IASTVisitor {
         let result = this.scope[constExpr.constToken.value];
 
         if (result === undefined) {
-            throw new Error("Undefined symbol '${constExpr.constToken.value}'.");
+            throw new Error(`Undefined symbol '${constExpr.constToken.value}'.`);
         }
         this.stack.push(result);
 
