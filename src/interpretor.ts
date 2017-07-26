@@ -723,10 +723,15 @@ export default class Intepretor {
 
     constructor() { }
 
-    // TODO: implement the following grammar
-    // declaration : ID EQUAL expr
-
     /*
+
+    program : declaration (declaration)*
+
+    declaration : ID EQUAL expr
+                | ID LPAREN args RPAREN EQUAL expr
+
+    args : (ID (COMMA ID)*)*
+
     expr : term ((PLUS | MINUS) term)*
          | closure
 
@@ -735,11 +740,18 @@ export default class Intepretor {
     term : (PLUS | MINUS)* factor ((MUL | DIV | POW) factor)*
 
     factor : PLUS factor
-            | MINUS factor
-            | NUMBER
-            | FACTORIAL NUMBER
-            | LPAREN expr RPAREN
-            | variable
+           | MINUS factor
+           | NUMBER
+           | FACTORIAL NUMBER
+           | LPAREN expr RPAREN
+           | variable
+           | ID
+           | function_call
+
+    function_call : ID LPAREN args_input RPAREN EQUAL expr
+
+    args_input : (expr (COMMA ID)*)*
+
     */
 
     public interpret(input: string, visitor: IASTVisitor) {
